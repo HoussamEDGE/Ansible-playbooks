@@ -1,0 +1,53 @@
+---
+- name: Install and Configure LAMP Stack
+  hosts: web_servers
+  become: yes
+
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Install MySQL Server
+      apt:
+        name: mysql-server
+        state: present
+      vars:
+        mysql_root_password: "your_root_password_here"
+      become_user: root
+      become_method: sudo
+      become_flags: "-H"
+      no_log: true
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      args:
+        creates: /etc/mysql/my.cnf
+      register: mysql_install_result
+      ignore_errors: true
+
+    - name: Secure MySQL installation
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: yes
+        login_user: "{{ mysql_install_result.become_user }}"
+      when: mysql_install_result.rc == 0
+
+    - name: Install PHP and required modules
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - php
+        - libapache2-mod-php
+        - php-mysql
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
