@@ -1,0 +1,33 @@
+---
+- name: Deploy Spring Boot Application
+  hosts: app_servers
+  become: yes
+
+  vars:
+    app_name: my-springboot-app
+    app_version: 1.0.0
+    app_jar_name: "{{ app_name }}-{{ app_version }}.jar"
+    app_remote_path: "/opt/{{ app_name }}"
+    app_local_path: "/local/path/to/{{ app_jar_name }}"
+
+  tasks:
+    - name: Create application directory
+      file:
+        path: "{{ app_remote_path }}"
+        state: directory
+        mode: 0755
+      become_user: "{{ ansible_user }}"
+
+    - name: Copy JAR file to the remote server
+      copy:
+        src: "{{ app_local_path }}"
+        dest: "{{ app_remote_path }}/{{ app_jar_name }}"
+        mode: 0644
+      become_user: "{{ ansible_user }}"
+
+    - name: Ensure the application is running
+      systemd:
+        name: "{{ app_name }}"
+        state: started
+        enabled: yes
+      become_user: "{{ ansible_user }}"
