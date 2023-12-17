@@ -1,0 +1,30 @@
+---
+- name: Deploy Spring Boot Application with Jenkins
+  hosts: jenkins_server
+  become: yes
+
+  vars:
+    app_name: my-springboot-app
+    app_repo_url: "https://github.com/yourusername/{{ app_name }}.git"
+    app_remote_path: "/opt/{{ app_name }}"
+    app_jenkins_job: "deploy-springboot-app"
+
+  tasks:
+    - name: Ensure Git is installed
+      apt:
+        name: git
+        state: present
+
+    - name: Clone the Spring Boot application repository
+      git:
+        repo: "{{ app_repo_url }}"
+        dest: "{{ app_remote_path }}"
+        version: master
+
+    - name: Trigger Jenkins job to build and deploy
+      uri:
+        url: "http://jenkins-server/job/{{ app_jenkins_job }}/build"
+        method: POST
+        status_code: 201
+        validate_certs: no
+      ignore_errors: yes
