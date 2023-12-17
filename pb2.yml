@@ -1,0 +1,46 @@
+---
+- name: Configure and Deploy a Django Application
+  hosts: web_servers
+  become: yes
+
+  vars:
+    django_app_path: "/opt/mydjangoapp"
+    django_virtualenv: "/opt/venv"
+    django_app_repo: "https://github.com/example/mydjangoapp.git"
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - python3
+        - python3-pip
+        - python3-venv
+        - git
+
+    - name: Clone Django application repository
+      git:
+        repo: "{{ django_app_repo }}"
+        dest: "{{ django_app_path }}"
+        version: master
+
+    - name: Create and activate virtual environment
+      command: "python3 -m venv {{ django_virtualenv }}"
+    
+    - name: Install Python dependencies
+      pip:
+        requirements: "{{ django_app_path }}/requirements.txt"
+        virtualenv: "{{ django_virtualenv }}"
+
+    - name: Configure Django settings
+      template:
+        src: "settings.j2"
+        dest: "{{ django_app_path }}/mydjangoapp/settings.py"
+      notify: Restart Django
+
+  handlers:
+    - name: Restart Django
+      systemd:
+        name: mydjangoapp
+        state: restarted
